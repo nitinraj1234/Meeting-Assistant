@@ -32,7 +32,7 @@ class MeetingAgent:
         self.transcript = None
         self.analysis = None
 
-   
+    # ── Audio ──────────────────────────────────────────────────────────────────
 
     def _download_youtube_audio(self, url: str) -> str:
         ydl_opts = {
@@ -40,12 +40,21 @@ class MeetingAgent:
             "outtmpl": os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s"),
             "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "wav", "preferredquality": "192"}],
             "quiet": True,
+            "nocheckcertificate": True,
+            "extractor_retries": 3,
+            "socket_timeout": 30,
         }
-        
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info).replace(".webm", ".wav").replace(".m4a", ".wav")
-        return filename
+
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                filename = ydl.prepare_filename(info).replace(".webm", ".wav").replace(".m4a", ".wav")
+            return filename
+        except Exception:
+            raise ValueError(
+                "YouTube download failed. This usually happens because YouTube blocks server IPs.\n\n"
+                "Please download the video manually and upload the file instead."
+            )
 
     def _normalize_audio(self, input_path: str) -> str:
         output_path = os.path.splitext(input_path)[0] + "_normalized.wav"
@@ -64,11 +73,20 @@ class MeetingAgent:
         return chunks
 
     def process_input(self, source: str) -> list:
-        raw = self._download_youtube_audio(source) if source.startswith("http") else source
+        if source.startswith("http"):
+            raw = self._download_youtube_audio(source)
+        else:
+            if not os.path.exists(source):
+                raise ValueError(
+                    f"File not found: {source}\n\n"
+                    "Please check the file and try again."
+                )
+            raw = source
         wav = self._normalize_audio(raw)
         return self._chunk_audio(wav)
 
-  
+    # ── Transcription ──────────────────────────────────────────────────────────
+
     def transcribe_all(self, chunks: list) -> str:
         client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         full_transcript = ""
@@ -88,7 +106,8 @@ class MeetingAgent:
         self.transcript = full_transcript.strip()
         return self.transcript
 
-  
+    # ── Title ─────────────────────────────────────────────────────────────────
+
     def generate_title(self, transcript: str) -> str:
         prompt = ChatPromptTemplate.from_messages([
             ("system", "Generate a short professional meeting title (max 8 words). Return only the title."),
@@ -98,7 +117,7 @@ class MeetingAgent:
 
         return chain.invoke({"text": transcript[:2000]})
 
-   
+    # ── Analysis ──────────────────────────────────────────────────────────────
 
     def analyze_meeting(self, transcript: str) -> str:
         system_prompt = """Analyze this meeting section and provide:
@@ -143,19 +162,16 @@ Use clear headings and bullet points."""
         ])
         analysis_chain = analysis_prompt | self.llm | StrOutputParser()
 
-      
         parts = []
         i = 0
         while i < len(transcript):
             parts.append(transcript[i:i + MAX_CHARS])
             i = i + MAX_CHARS
 
-      
         if len(parts) == 1:
             self.analysis = analysis_chain.invoke({"text": parts[0]})
             return self.analysis
 
-      
         results = []
 
         for part in parts:
@@ -171,7 +187,6 @@ Use clear headings and bullet points."""
                     else:
                         raise
 
-       
         combine_prompt_template = ChatPromptTemplate.from_messages([
             ("system", combine_prompt),
             ("human", "{text}")
@@ -181,15 +196,15 @@ Use clear headings and bullet points."""
         self.analysis = combine_chain.invoke({"text": "\n\n".join(results)})
         return self.analysis
 
-  
+    # ── Vector store ──────────────────────────────────────────────────────────
 
     def build_vector_store(self, transcript: str):
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1200, chunk_overlap=300,separators=["\n\n", "\n", ". ", " ", ""])
+        splitter = RecursiveCharacterTextSplitter(chunk_size=1200, chunk_overlap=300, separators=["\n\n", "\n", ". ", " ", ""])
         chunks = splitter.split_text(transcript)
         embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL, model_kwargs={"device": "cpu"})
         self.vector_store = FAISS.from_texts(chunks, embeddings)
 
-    
+    # ── Q&A ───────────────────────────────────────────────────────────────────
 
     def ask(self, question: str) -> str:
         retriever = self.vector_store.as_retriever(
@@ -199,7 +214,6 @@ Use clear headings and bullet points."""
 
         docs = retriever.invoke(question)
 
-     
         context = ""
         for doc in docs:
             context = context + doc.page_content + "\n\n"
@@ -218,4 +232,3 @@ Rules:
         chain = prompt | self.llm | StrOutputParser()
 
         return chain.invoke({"summary": self.analysis, "context": context, "question": question})
-    

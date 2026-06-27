@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 from dotenv import load_dotenv
 from agent import MeetingAgent
@@ -16,7 +17,7 @@ if "agent" not in st.session_state:
 
 agent = st.session_state.agent
 
-
+# ── Header ────────────────────────────────────────────
 
 left_head, right_head = st.columns([3, 1])
 
@@ -25,63 +26,76 @@ with left_head:
     st.caption("Transcribe, summarize, and chat with your meeting")
 
 with right_head:
-    with st.expander("📂 How to get file path"):
+    with st.expander("ℹ️ How to use"):
         st.markdown("""
-**Mac**
-- Hold `Option`
-- Right click file
-- Copy "file" as Pathname
+**YouTube URL**
+Paste any YouTube link directly.
 
-**Windows**
-- Hold `Shift`
-- Right click file
-- Copy as path
+**Local File**
+Upload an audio or video file using the uploader below.
+Supported: mp4, mp3, wav, m4a, webm
         """)
 
 st.divider()
 
-
+# ── Input ─────────────────────────────────────────────
 
 source = st.text_input(
-    "YouTube URL or local file path",
-    placeholder="https://youtube.com/... or /path/to/file.mp4"
+    "YouTube URL",
+    placeholder="https://youtube.com/..."
+)
+
+uploaded_file = st.file_uploader(
+    "Or upload an audio/video file",
+    type=["mp4", "mp3", "wav", "m4a", "webm"]
 )
 
 if st.button("Process & Analyse", type="primary"):
 
-    if not source.strip():
-        st.warning("Please enter a YouTube URL or local file path.")
+    if not source.strip() and uploaded_file is None:
+        st.warning("Please enter a YouTube URL or upload a file.")
 
     else:
+        try:
+            if uploaded_file is not None:
+                temp_path = os.path.join("downloads", uploaded_file.name)
+                os.makedirs("downloads", exist_ok=True)
+                with open(temp_path, "wb") as f:
+                    f.write(uploaded_file.read())
+                with st.spinner("Processing audio..."):
+                    chunks = agent.process_input(temp_path)
 
-        with st.spinner("Processing audio..."):
-            chunks = agent.process_input(source.strip())
+            else:
+                with st.spinner("Processing audio..."):
+                    chunks = agent.process_input(source.strip())
 
-        with st.spinner("Transcribing..."):
-            transcript = agent.transcribe_all(chunks)
+            with st.spinner("Transcribing..."):
+                transcript = agent.transcribe_all(chunks)
 
-        with st.spinner("Generating title..."):
-            title = agent.generate_title(transcript)
+            with st.spinner("Generating title..."):
+                title = agent.generate_title(transcript)
 
-        with st.spinner("Analysing meeting..."):
-            analysis = agent.analyze_meeting(transcript)
+            with st.spinner("Analysing meeting..."):
+                analysis = agent.analyze_meeting(transcript)
 
-        with st.spinner("Building knowledge base..."):
-            agent.build_vector_store(transcript)
+            with st.spinner("Building knowledge base..."):
+                agent.build_vector_store(transcript)
 
-        st.session_state.result = {
-            "title": title,
-            "transcript": transcript,
-            "analysis": analysis,
-        }
+            st.session_state.result = {
+                "title": title,
+                "transcript": transcript,
+                "analysis": analysis,
+            }
 
-        st.session_state.chat_messages = []
+            st.session_state.chat_messages = []
+            st.success("Done!")
 
-        st.success("Done!")
+        except ValueError as e:
+            st.error(str(e))
 
 st.divider()
 
-
+# ── Main UI ───────────────────────────────────────────
 
 if st.session_state.result:
 
@@ -91,7 +105,7 @@ if st.session_state.result:
 
     left, right = st.columns([1, 1])
 
-   
+    # ── Left: Analysis + Transcript ──
 
     with left:
 
@@ -103,7 +117,7 @@ if st.session_state.result:
         with tab2:
             st.text_area("Full Transcript", result["transcript"], height=500)
 
-
+    # ── Right: Q&A ──
 
     with right:
 
