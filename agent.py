@@ -41,6 +41,10 @@ class MeetingAgent:
             "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "wav", "preferredquality": "192"}],
             "quiet": True,
         }
+        cookies_path = "cookies.txt"
+        if os.path.exists(cookies_path):
+            ydl_opts["cookiefile"] = cookies_path
+            
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info).replace(".webm", ".wav").replace(".m4a", ".wav")
