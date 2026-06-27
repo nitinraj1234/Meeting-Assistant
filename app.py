@@ -53,33 +53,32 @@ if st.button("Process & Analyse", type="primary"):
         st.warning("Please enter a YouTube URL or local file path.")
 
     else:
-        try:
-            with st.spinner("Processing audio..."):
-                chunks = agent.process_input(source.strip())
 
-            with st.spinner("Transcribing..."):
-                transcript = agent.transcribe_all(chunks)
+        with st.spinner("Processing audio..."):
+            chunks = agent.process_input(source.strip())
 
-            with st.spinner("Generating title..."):
-                title = agent.generate_title(transcript)
+        with st.spinner("Transcribing..."):
+            transcript = agent.transcribe_all(chunks)
 
-            with st.spinner("Analysing meeting..."):
-                analysis = agent.analyze_meeting(transcript)
+        with st.spinner("Generating title..."):
+            title = agent.generate_title(transcript)
 
-            with st.spinner("Building knowledge base..."):
-                agent.build_vector_store(transcript)
+        with st.spinner("Analysing meeting..."):
+            analysis = agent.analyze_meeting(transcript)
 
-            st.session_state.result = {
-                "title": title,
-                "transcript": transcript,
-                "analysis": analysis,
-            }
+        with st.spinner("Building knowledge base..."):
+            agent.build_vector_store(transcript)
 
-            st.session_state.chat_messages = []
+        st.session_state.result = {
+            "title": title,
+            "transcript": transcript,
+            "analysis": analysis,
+        }
 
-            st.success("Done!")
-        except ValueError as e:
-            st.error(str(e))
+        st.session_state.chat_messages = []
+
+        st.success("Done!")
+
 st.divider()
 
 

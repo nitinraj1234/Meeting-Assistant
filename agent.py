@@ -41,10 +41,7 @@ class MeetingAgent:
             "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "wav", "preferredquality": "192"}],
             "quiet": True,
         }
-        cookies_path = "cookies.txt"
-        if os.path.exists(cookies_path):
-            ydl_opts["cookiefile"] = cookies_path
-
+        
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info).replace(".webm", ".wav").replace(".m4a", ".wav")
@@ -67,15 +64,7 @@ class MeetingAgent:
         return chunks
 
     def process_input(self, source: str) -> list:
-        if source.startswith("http"):
-            raw = self._download_youtube_audio(source)
-        else:
-            if not os.path.exists(source):
-                raise ValueError(
-                f"File not found: {source}\n\n"
-                "Please check the file path and try again."
-            )
-            raw = source
+        raw = self._download_youtube_audio(source) if source.startswith("http") else source
         wav = self._normalize_audio(raw)
         return self._chunk_audio(wav)
 
