@@ -1,0 +1,31 @@
+# Python 3.11 recommended
+
+# Audio
+yt-dlp>=2024.4.9
+pydub>=0.25.1
+ffmpeg-python>=0.2.0
+
+# Transcription
+openai-whisper>=20231117
+torch>=2.2.0
+torchaudio>=2.2.0
+
+# LangChain + Groq
+langchain>=0.2.0
+langchain-core>=0.2.0
+langchain-community>=0.2.0
+langchain-groq>=0.1.9
+
+# Embeddings + Vector Store
+sentence-transformers>=3.0.0
+langchain-huggingface>=0.0.3
+huggingface-hub>=0.23.0
+faiss-cpu>=1.7.4
+
+# Streamlit
+streamlit>=1.35.0
+
+# Utils
+python-dotenv>=1.0.0
+numpy>=1.26.0
+tqdm>=4.66.0
