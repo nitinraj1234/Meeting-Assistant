@@ -9,7 +9,8 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 # from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.embeddings import FastEmbedEmbeddings
+# from langchain_community.embeddings import FastEmbedEmbeddings
+from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -202,7 +203,10 @@ Use clear headings and bullet points."""
     def build_vector_store(self, transcript: str):
         splitter = RecursiveCharacterTextSplitter(chunk_size=1200, chunk_overlap=300, separators=["\n\n", "\n", ". ", " ", ""])
         chunks = splitter.split_text(transcript)
-        embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+        embeddings = HuggingFaceInferenceAPIEmbeddings(
+        api_key=os.getenv("HF_TOKEN"),
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    )
         self.vector_store = FAISS.from_texts(chunks, embeddings)
 
     # ── Q&A ───────────────────────────────────────────────────────────────────
