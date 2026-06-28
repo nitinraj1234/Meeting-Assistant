@@ -1,6 +1,6 @@
 import os
 import time
-from pydub import AudioSegment
+import subprocess
 from dotenv import load_dotenv
 from groq import Groq
 
@@ -31,25 +31,32 @@ class MeetingAgent:
         self.transcript = None
         self.analysis = None
 
-    def _normalize_audio(self, input_path: str) -> str:
-        output_path = os.path.splitext(input_path)[0] + "_normalized.wav"
-        audio = AudioSegment.from_file(input_path)
-        audio.set_channels(1).set_frame_rate(16000).export(output_path, format="wav")
-        return output_path
-
-    def _chunk_audio(self, wav_path: str, chunk_minutes: int = 2) -> list:
-        audio = AudioSegment.from_wav(wav_path)
-        chunk_ms = chunk_minutes * 60 * 1000
-        chunks = []
-        for i, start in enumerate(range(0, len(audio), chunk_ms)):
-            path = f"{wav_path}_chunk_{i}.mp3"
-            audio[start:start + chunk_ms].export(path, format="mp3", bitrate="64k")
-            chunks.append(path)
-        return chunks
-
     def process_input(self, source: str) -> list:
-        wav = self._normalize_audio(source)
-        return self._chunk_audio(wav)
+        chunks = []
+        i = 0
+        while True:
+            output_path = os.path.join(DOWNLOAD_DIR, f"chunk_{i}.mp3")
+            start_seconds = i * 2 * 60
+            result = subprocess.run([
+                "ffmpeg",
+                "-ss", str(start_seconds),
+                "-i", source,
+                "-t", str(2 * 60),
+                "-ar", "16000",
+                "-ac", "1",
+                "-ab", "64k",
+                "-f", "mp3",
+                "-y",
+                output_path
+            ], capture_output=True)
+
+            if not os.path.exists(output_path) or os.path.getsize(output_path) < 1000:
+                break
+
+            chunks.append(output_path)
+            i = i + 1
+
+        return chunks
 
     def transcribe_all(self, chunks: list) -> str:
         client = Groq(api_key=os.getenv("GROQ_API_KEY"))
