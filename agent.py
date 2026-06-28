@@ -37,7 +37,7 @@ class MeetingAgent:
         audio.set_channels(1).set_frame_rate(16000).export(output_path, format="wav")
         return output_path
 
-    def _chunk_audio(self, wav_path: str, chunk_minutes: int = 5) -> list:
+    def _chunk_audio(self, wav_path: str, chunk_minutes: int = 2) -> list:
         audio = AudioSegment.from_wav(wav_path)
         chunk_ms = chunk_minutes * 60 * 1000
         chunks = []
