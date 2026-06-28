@@ -181,16 +181,14 @@ Use clear headings and bullet points."""
             context = context + doc.page_content + "\n\n"
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are a meeting assistant.
-Answer using the meeting summary and the detailed context provided below.
+    ("system", """You are a highly precise meeting assistant. Your task is to answer questions based strictly on the provided Meeting Summary and Detailed Context.
+
 Rules:
-- Do not use outside knowledge.
-- Do not guess or assume.
-- Do not infer facts that are not explicitly stated.
-- If the answer is not present in either the summary or the context, reply exactly:
-  'I could not find this information in the meeting transcript.'"""),
-            ("human", "Meeting Summary:\n{summary}\n\nDetailed Context:\n{context}\n\nQuestion:\n{question}")
-        ])
+1. Grounding: Rely ONLY on the clear facts explicitly mentioned in the text. Do not use outside knowledge, guess, or assume.
+2. Contextual Linkage: You are expected to connect related concepts discussed across different speakers (e.g., recognizing that a speaker's suggestion is a proposal, or that another speaker's reply is a counter-argument/alternative), even if they use slightly different wording.
+3. Strict Fallback: If the answer cannot be found by pulling from or connecting the facts in the text, reply exactly: 'I could not find this information in the meeting transcript.'"""),
+    ("human", "Meeting Summary:\n{summary}\n\nDetailed Context:\n{context}\n\nQuestion:\n{question}")
+])
         chain = prompt | self.llm | StrOutputParser()
 
         return chain.invoke({"summary": self.analysis, "context": context, "question": question})
