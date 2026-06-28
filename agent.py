@@ -1,6 +1,5 @@
 import os
 import time
-import yt_dlp
 from pydub import AudioSegment
 from dotenv import load_dotenv
 from groq import Groq
@@ -8,9 +7,7 @@ from groq import Groq
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-# from langchain_huggingface import HuggingFaceEmbeddings
-# from langchain_community.embeddings import FastEmbedEmbeddings
-from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -34,30 +31,6 @@ class MeetingAgent:
         self.transcript = None
         self.analysis = None
 
-    # ── Audio ──────────────────────────────────────────────────────────────────
-
-    def _download_youtube_audio(self, url: str) -> str:
-        ydl_opts = {
-            "format": "bestaudio/best",
-            "outtmpl": os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s"),
-            "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "wav", "preferredquality": "192"}],
-            "quiet": True,
-            "nocheckcertificate": True,
-            "extractor_retries": 3,
-            "socket_timeout": 30,
-        }
-
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                filename = ydl.prepare_filename(info).replace(".webm", ".wav").replace(".m4a", ".wav")
-            return filename
-        except Exception:
-            raise ValueError(
-                "YouTube download failed. This usually happens because YouTube blocks server IPs.\n\n"
-                "Please download the video manually and upload the file instead."
-            )
-
     def _normalize_audio(self, input_path: str) -> str:
         output_path = os.path.splitext(input_path)[0] + "_normalized.wav"
         audio = AudioSegment.from_file(input_path)
@@ -75,19 +48,8 @@ class MeetingAgent:
         return chunks
 
     def process_input(self, source: str) -> list:
-        if source.startswith("http"):
-            raw = self._download_youtube_audio(source)
-        else:
-            if not os.path.exists(source):
-                raise ValueError(
-                    f"File not found: {source}\n\n"
-                    "Please check the file and try again."
-                )
-            raw = source
-        wav = self._normalize_audio(raw)
+        wav = self._normalize_audio(source)
         return self._chunk_audio(wav)
-
-    # ── Transcription ──────────────────────────────────────────────────────────
 
     def transcribe_all(self, chunks: list) -> str:
         client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -108,18 +70,13 @@ class MeetingAgent:
         self.transcript = full_transcript.strip()
         return self.transcript
 
-    # ── Title ─────────────────────────────────────────────────────────────────
-
     def generate_title(self, transcript: str) -> str:
         prompt = ChatPromptTemplate.from_messages([
             ("system", "Generate a short professional meeting title (max 8 words). Return only the title."),
             ("human", "{text}")
         ])
         chain = prompt | self.llm | StrOutputParser()
-
         return chain.invoke({"text": transcript[:2000]})
-
-    # ── Analysis ──────────────────────────────────────────────────────────────
 
     def analyze_meeting(self, transcript: str) -> str:
         system_prompt = """Analyze this meeting section and provide:
@@ -198,18 +155,11 @@ Use clear headings and bullet points."""
         self.analysis = combine_chain.invoke({"text": "\n\n".join(results)})
         return self.analysis
 
-    # ── Vector store ──────────────────────────────────────────────────────────
-
     def build_vector_store(self, transcript: str):
         splitter = RecursiveCharacterTextSplitter(chunk_size=1200, chunk_overlap=300, separators=["\n\n", "\n", ". ", " ", ""])
         chunks = splitter.split_text(transcript)
-        embeddings = HuggingFaceInferenceAPIEmbeddings(
-        api_key=os.getenv("HF_TOKEN"),
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
-    )
+        embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL, model_kwargs={"device": "cpu"})
         self.vector_store = FAISS.from_texts(chunks, embeddings)
-
-    # ── Q&A ───────────────────────────────────────────────────────────────────
 
     def ask(self, question: str) -> str:
         retriever = self.vector_store.as_retriever(

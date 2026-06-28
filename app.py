@@ -19,55 +19,33 @@ agent = st.session_state.agent
 
 # ── Header ────────────────────────────────────────────
 
-left_head, right_head = st.columns([3, 1])
-
-with left_head:
-    st.title("Meeting Assistant")
-    st.caption("Transcribe, summarize, and chat with your meeting")
-
-with right_head:
-    with st.expander("ℹ️ How to use"):
-        st.markdown("""
-**YouTube URL**
-Paste any YouTube link directly.
-
-**Local File**
-Upload an audio or video file using the uploader below.
-Supported: mp4, mp3, wav, m4a, webm
-        """)
+st.title("Meeting Assistant")
+st.caption("Transcribe, summarize, and chat with your meeting")
 
 st.divider()
 
 # ── Input ─────────────────────────────────────────────
 
-source = st.text_input(
-    "YouTube URL",
-    placeholder="https://youtube.com/..."
-)
-
 uploaded_file = st.file_uploader(
-    "Or upload an audio/video file",
+    "Upload your meeting audio or video file",
     type=["mp4", "mp3", "wav", "m4a", "webm"]
 )
+st.caption("💡 For best results upload mp3. 1hr meeting ≈ 60MB.")
 
 if st.button("Process & Analyse", type="primary"):
 
-    if not source.strip() and uploaded_file is None:
-        st.warning("Please enter a YouTube URL or upload a file.")
+    if uploaded_file is None:
+        st.warning("Please upload a file.")
 
     else:
         try:
-            if uploaded_file is not None:
-                temp_path = os.path.join("downloads", uploaded_file.name)
-                os.makedirs("downloads", exist_ok=True)
-                with open(temp_path, "wb") as f:
-                    f.write(uploaded_file.read())
-                with st.spinner("Processing audio..."):
-                    chunks = agent.process_input(temp_path)
+            temp_path = os.path.join("downloads", uploaded_file.name)
+            os.makedirs("downloads", exist_ok=True)
+            with open(temp_path, "wb") as f:
+                f.write(uploaded_file.read())
 
-            else:
-                with st.spinner("Processing audio..."):
-                    chunks = agent.process_input(source.strip())
+            with st.spinner("Processing audio..."):
+                chunks = agent.process_input(temp_path)
 
             with st.spinner("Transcribing..."):
                 transcript = agent.transcribe_all(chunks)
@@ -90,7 +68,7 @@ if st.button("Process & Analyse", type="primary"):
             st.session_state.chat_messages = []
             st.success("Done!")
 
-        except ValueError as e:
+        except Exception as e:
             st.error(str(e))
 
 st.divider()
@@ -105,10 +83,7 @@ if st.session_state.result:
 
     left, right = st.columns([1, 1])
 
-    # ── Left: Analysis + Transcript ──
-
     with left:
-
         tab1, tab2 = st.tabs(["Analysis", "Transcript"])
 
         with tab1:
@@ -117,10 +92,7 @@ if st.session_state.result:
         with tab2:
             st.text_area("Full Transcript", result["transcript"], height=500)
 
-    # ── Right: Q&A ──
-
     with right:
-
         st.subheader("Ask about your meeting")
         st.caption("Each question is answered independently from the transcript.")
 
@@ -134,7 +106,6 @@ if st.session_state.result:
         question = st.chat_input("Ask anything about the meeting...")
 
         if question:
-
             st.session_state.chat_messages.append({
                 "role": "user",
                 "content": question
