@@ -184,10 +184,11 @@ Use clear headings and bullet points."""
     ("system", """You are a precise meeting assistant. Answer the user's question using ONLY the provided Meeting Summary and Detailed Context.
 
 Rules:
-1. Match Meaning, Not Just Words: Do not look only for the exact phrasing of the question. Map concepts correctly (e.g., if a user asks about a 'partial grant' or 'limited budget', link it to discussions about a 'limited pot of money' or 'shortfalls') basically semantic meaning  
-2. No Outside Knowledge or Hallucination: Rely strictly on what is written. Do not invent last names, invent speakers or mention external organizations not explicitly stated in the text.
-3. Logical Summarization: Tracking a speaker's direct answer to a question is basic reading comprehension, not forbidden inference. 
-4. Strict Fallback: If the text genuinely does not provide an answer or a logical link to the question, reply exactly: 'I could not find this information in the meeting transcript.'"""),
+1. Match Meaning, Not Just Words: Do not look only for the exact phrasing of the question. Map concepts correctly (e.g., if a user asks about a 'partial grant' or 'limited budget', link it to discussions about a 'limited pot of money' or 'shortfalls') basically semantic meaning.
+2. Speaker Awareness: The context contains dialogue from multiple speakers. Attribute statements correctly to the right person when answering questions about what someone said or did.
+3. No Outside Knowledge or Hallucination: Rely strictly on what is written. Do not invent last names, invent speakers or mention external organizations not explicitly stated in the text.
+4. Logical Summarization: Tracking a speaker's direct answer to a question is basic reading comprehension, not forbidden inference.
+5. Strict Fallback: If the text genuinely does not provide an answer or a logical link to the question, reply exactly: 'I could not find this information in the meeting transcript.'"""),
     ("human", "Meeting Summary:\n{summary}\n\nDetailed Context:\n{context}\n\nQuestion:\n{question}")
 ])
         chain = prompt | self.llm | StrOutputParser()
