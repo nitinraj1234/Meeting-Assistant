@@ -1,6 +1,6 @@
 # Meeting Assistant
 
-Meeting Assistant is a web application that helps you process your meeting recordings. You can upload an audio or video file, and the app will automatically chop it, transcribe it into text, create a professional title, write a summary report, and let you ask questions about the meeting.
+Meeting Assistant is a web application that helps you process your meeting recordings. You can upload an audio or video file upto 200mb, and the web will automatically chop it, transcribe it into text, create a professional title, write a summary report, and let you ask questions about the meeting.
 
 **Live Application Link:** [Click here to use Meeting Assistant](https://meeting-assistantgit-qg6uvapagbfcejnpzjjvmv.streamlit.app/)
 
@@ -16,7 +16,7 @@ Meeting Assistant is a web application that helps you process your meeting recor
 ---
 ## How the App Works Step-by-Step
 
-When you upload a file and click the **"Process & Analyse"** button, the backend code executes a complete data pipeline from start to finish. Here is the highly detailed breakdown of what happens under the hood:
+When you upload a file and click the **"Process & Analyse"** button, the backend code executes a complete data pipeline from start to finish. Here is the highly detailed breakdown of what happens :
 
 ### 1. File Upload and Local Storage
 * **File Ingestion:** The `Streamlit` frontend interface accepts your media file (supporting formats like `.mp3`, `.mp4`, `.wav`, `.m4a`, or `.webm`).
@@ -65,7 +65,7 @@ To allow you to chat with your transcript, the app builds a searchable mathemati
 This project uses the following tools and libraries:
 
 * **Frontend UI:** `Streamlit` (to build the web page interface).
-* **AI Orchestration:** `LangChain`, `LangChain-Core`, `LangChain-Community`, and `LangChain-Groq` (to manage prompts, tools, and AI text processing).
+* **Connecting AI Tools:** `LangChain`, `LangChain-Core`, `LangChain-Community`, and `LangChain-Groq` (to manage prompts, tools, and AI text processing).
 * **LLM & API Provider:** `Groq Cloud API` running the `meta-llama/llama-4-scout-17b-16e-instruct` model for text tasks.
 * **Speech-to-Text:** `Whisper-Large-v3` (via Groq API) to transcribe the audio chunks.
 * **Vector Database:** `FAISS` (CPU version) to store text snippets for the chat function.
