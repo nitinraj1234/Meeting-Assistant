@@ -17,14 +17,12 @@ if "agent" not in st.session_state:
 
 agent = st.session_state.agent
 
-# ── Header ────────────────────────────────────────────
 
 st.title("Meeting Assistant")
 st.caption("Transcribe, summarize, and chat with your meeting")
 
 st.divider()
 
-# ── Input ─────────────────────────────────────────────
 
 uploaded_file = st.file_uploader(
     "Upload your meeting audio or video file",
@@ -73,7 +71,6 @@ if st.button("Process & Analyse", type="primary"):
 
 st.divider()
 
-# ── Main UI ───────────────────────────────────────────
 
 if st.session_state.result:
 
